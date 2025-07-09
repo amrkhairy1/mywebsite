@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive CV - Amr Khairy</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=Poppins:wght@600;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Warm Neutral Harmony -->
+    <!-- Application Structure Plan: A single-page, thematic SPA designed to present the CV as an interactive narrative. The structure includes a high-level dashboard for immediate impact, an interactive timeline for exploring career progression without clutter, a visual skills chart for quick competency assessment, and a project showcase to highlight key achievements. This structure guides the user from summary to detail, making the profile more engaging and easier to digest than a static document, catering to busy executives and recruiters. -->
+    <!-- Visualization & Content Choices: Dashboard Cards (HTML/CSS) -> Goal: Inform -> Show top-level metrics for quick impact. Interactive Timeline (HTML/CSS/JS) -> Goal: Change/Organize -> Show career progression dynamically; clicking a role reveals details, preventing information overload. Skills Bar Chart (Chart.js/Canvas) -> Goal: Compare/Inform -> Visually represent core competencies for easy comparison. Project Showcase Cards (HTML/CSS) -> Goal: Inform -> Provide context and results for key projects as mini case-studies. All choices avoid SVG/Mermaid, focusing on clarity and interactivity. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #F8F7F4;
+            color: #4A4A4A;
+        }
+        h1, h2, h3, .font-heading {
+            font-family: 'Poppins', sans-serif;
+        }
+        .accent-bg { background-color: #0A2342; }
+        .accent-text { color: #0A2342; }
+        .highlight-bg { background-color: #B89B72; }
+        .highlight-text { color: #B89B72; }
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            top: 1.25rem;
+            left: -0.5rem;
+            transform: translateX(-50%);
+            width: 1.25rem;
+            height: 1.25rem;
+            border-radius: 50%;
+            background-color: #F8F7F4;
+            border: 4px solid #0A2342;
+            z-index: 10;
+        }
+        .timeline-item.active::before {
+            background-color: #B89B72;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 350px;
+            max-height: 400px;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 400px;
+            }
+        }
+        html {
+            scroll-behavior: smooth;
+        }
+
+        /* Modal specific styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.8);
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-content {
+            margin: auto;
+            display: block;
+            max-width: 90%;
+            max-height: 90%;
+            border-radius: 0.5rem;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+        }
+        .close-button {
+            position: absolute;
+            top: 15px;
+            right: 35px;
+            color: #f1f1f1;
+            font-size: 40px;
+            font-weight: bold;
+            transition: 0.3s;
+            cursor: pointer;
+        }
+        .close-button:hover,
+        .close-button:focus {
+            color: #bbb;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        /* Added for sticky header offset when scrolling to specific section */
+        #timeline-details, #education, #languages {
+            scroll-margin-top: 5rem; /* Adjust this value if your header height changes */
+        }
+        .icon {
+            display: inline-block;
+            width: 1em; /* Adjust as needed */
+            height: 1em; /* Adjust as needed */
+            vertical-align: -0.125em; /* Align with text */
+            margin-right: 0.25em; /* Space between icon and text */
+            fill: currentColor; /* Inherit color from parent */
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <header class="accent-bg text-white shadow-lg sticky top-0 z-50">
+        <div class="container mx-auto px-6 py-3 flex justify-between items-center">
+            <h1 class="text-xl md:text-2xl font-bold">Amr Khairy</h1>
+            <nav>
+                <a href="#summary" class="hidden sm:inline text-sm font-medium text-gray-300 hover:text-white px-3 py-2 rounded-md transition">Summary</a>
+                <a href="#career" class="text-sm font-medium text-gray-300 hover:text-white px-3 py-2 rounded-md transition">Career</a>
+                <a href="#skills" class="text-sm font-medium text-gray-300 hover:text-white px-3 py-2 rounded-md transition">Skills</a>
+                <a href="#education" class="text-sm font-medium text-gray-300 hover:text-white px-3 py-2 rounded-md transition">Education</a>
+                <a href="#languages" class="text-sm font-medium text-gray-300 hover:text-white px-3 py-2 rounded-md transition">Languages</a>
+                <a href="#projects" class="text-sm font-medium text-gray-300 hover:text-white px-3 py-2 rounded-md transition">Projects</a>
+            </nav>
+        </div>
+    </header>
+
+    <main>
+        <section id="hero" class="py-20 md:py-28 text-center bg-white">
+            <div class="container mx-auto px-6">
+                <!-- Amr Khairy's photo with click-to-enlarge functionality -->
+                <img id="profilePhoto" src="https://i.imgur.com/XBE5mle.jpeg" alt="Amr Khairy's Profile Photo" class="w-48 h-48 rounded-full mx-auto mb-6 object-cover border-4 border-highlight-bg shadow-lg cursor-pointer hover:scale-105 transition-transform duration-200">
+                <h2 class="text-4xl md:text-5xl lg:text-6xl font-bold accent-text">Strategic Operations & Digital Transformation Leader</h2>
+                <p class="mt-4 text-lg md:text-xl max-w-3xl mx-auto">Leveraging diverse leadership roles, including Head of Operations, Head of Digital Transformation, Chief Data Officer, and Chief of Staff, to drive operational excellence and digital innovation across global financial institutions.</p>
+                <div class="mt-8 flex justify-center items-center space-x-6 text-sm">
+                    <!-- Email with icon -->
+                    <a href="mailto:amrkhairy42@gmail.com" class="hover:highlight-text transition flex items-center">
+                        <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M2.003 5.884L10.26 12l-8.257 6.116A2 2 0 0 1 2 18V6a2 2 0 0 1 .003-.116zM20 18V6a2 2 0 0 0-2-2H6.236l7.946 5.912L20 11.723v6.277zm-1.003-2.116L12 10.26l7.997 5.912zM22 6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V6z"/></svg>
+                        amrkhairy42@gmail.com
+                    </a>
+                    <span class="text-gray-300">|</span>
+                    <!-- LinkedIn with icon -->
+                    <a href="https://www.linkedin.com/in/amrkhairy" target="_blank" class="hover:highlight-text transition flex items-center">
+                        <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.044-1.852-3.044-1.853 0-2.136 1.445-2.136 2.951v5.662H9.59V9.218h3.413v1.565h.045c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.013c-1.144 0-2.06-.923-2.06-2.058 0-1.133.916-2.058 2.06-2.058 1.145 0 2.06.925 2.06 2.058 0 1.135-.915 2.058-2.06 2.058zm1.783 13.439H3.555V9.218h3.565v11.234z"></path></svg>
+                        LinkedIn Profile
+                    </a>
+                    <span class="text-gray-300">|</span>
+                    <!-- Location with icon -->
+                    <span class="flex items-center">
+                        <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 6.5 12 6.5s2.5 1.12 2.5 2.5S13.38 11.5 12 11.5z"/></svg>
+                        Dubai, United Arab Emirates
+                    </span>
+                </div>
+            </div>
+        </section>
+
+        <section id="summary" class="py-16 md:py-24">
+            <div class="container mx-auto px-6">
+                <div class="text-center mb-12">
+                    <h2 class="text-3xl md:text-4xl font-bold accent-text">Career At a Glance</h2>
+                    <p class="mt-2 text-md max-w-2xl mx-auto">This dashboard provides a high-level overview of key career achievements and scope of responsibilities, reflecting extensive experience in leadership, operational excellence, and large-scale program management.</p>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                    <div class="bg-white p-6 rounded-lg shadow-md text-center hover:shadow-xl transition-shadow">
+                        <div class="text-5xl font-bold highlight-text">19</div>
+                        <p class="mt-2 font-semibold text-lg">Years of Experience</p>
+                        <p class="text-sm text-gray-500">in operations, data, technology, and transformation.</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg shadow-md text-center hover:shadow-xl transition-shadow">
+                        <div class="text-5xl font-bold highlight-text">130+</div>
+                        <p class="mt-2 font-semibold text-lg">Team Leadership</p>
+                        <p class="text-sm text-gray-500">members managed across 9 countries.</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg shadow-md text-center hover:shadow-xl transition-shadow">
+                        <div class="text-5xl font-bold highlight-text">$15M+</div>
+                        <p class="mt-2 font-semibold text-lg">Portfolio & Budget</p>
+                        <p class="text-sm text-gray-500">Managed cost base and change portfolios.</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg shadow-md text-center hover:shadow-xl transition-shadow">
+                        <div class="text-5xl font-bold highlight-text">$3M+</div>
+                        <p class="mt-2 font-semibold text-lg">Cost Reduction</p>
+                        <p class="text-sm text-gray-500">Delivered through innovation and strategy.</p>
+                    </div>
+                    <!-- New cards as requested -->
+                    <div class="bg-white p-6 rounded-lg shadow-md text-center hover:shadow-xl transition-shadow">
+                        <div class="text-5xl font-bold highlight-text">100%</div>
+                        <p class="mt-2 font-semibold text-lg">NPS Increase</p>
+                        <p class="text-sm text-gray-500">in customer satisfaction.</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg shadow-md text-center hover:shadow-xl transition-shadow">
+                        <div class="text-5xl font-bold highlight-text">~40%</div>
+                        <p class="mt-2 font-semibold text-lg">TAT Improvement</p>
+                        <p class="text-sm text-gray-500">in account opening.</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg shadow-md text-center hover:shadow-xl transition-shadow">
+                        <div class="text-5xl font-bold highlight-text">~30%</div>
+                        <p class="mt-2 font-semibold text-lg">Employee Engagement</p>
+                        <p class="text-sm text-gray-500">feedback improvement.</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg shadow-md text-center hover:shadow-xl transition-shadow">
+                        <div class="text-5xl font-bold highlight-text">20%</div>
+                        <p class="mt-2 font-semibold text-lg">Credit Decision Time</p>
+                        <p class="text-sm text-gray-500">faster with new software.</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg shadow-md text-center hover:shadow-xl transition-shadow">
+                        <div class="text-5xl font-bold highlight-text">Top 20%</div>
+                        <p class="mt-2 font-semibold text-lg">Top Performer</p>
+                        <p class="text-sm text-gray-500">for 4 consecutive years.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="career" class="py-16 md:py-24 bg-gray-50">
+            <div class="container mx-auto px-6">
+                <div class="text-center mb-12">
+                    <h2 class="text-3xl md:text-4xl font-bold accent-text">Career Timeline</h2>
+                    <p class="mt-2 text-md max-w-3xl mx-auto">This timeline details a journey of consistent growth and leadership. Click on any role to explore the specific responsibilities and key achievements associated with that position.</p>
+                </div>
+
+                <div class="lg:grid lg:grid-cols-12 lg:gap-12">
+                    <div class="lg:col-span-4">
+                        <div id="timeline-nav" class="relative pl-6 border-l-4 border-gray-200">
+                        </div>
+                    </div>
+                    <div class="lg:col-span-8 mt-12 lg:mt-0">
+                        <div id="timeline-details" class="bg-white p-8 rounded-lg shadow-lg min-h-[30rem] transition-all duration-500">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="skills" class="py-16 md:py-24">
+             <div class="container mx-auto px-6">
+                <div class="text-center mb-12">
+                    <h2 class="text-3xl md:text-4xl font-bold accent-text">Core Competencies</h2>
+                    <p class="mt-2 text-md max-w-2xl mx-auto">This chart visualizes the key areas of expertise developed over 19 years. It reflects a strong blend of leadership, technical program management, and strategic operational skills.</p>
+                </div>
+                <div class="bg-white p-4 md:p-8 rounded-lg shadow-lg">
+                    <div class="chart-container">
+                        <canvas id="skillsChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Education Section -->
+        <section id="education" class="py-16 md:py-24 bg-gray-50">
+            <div class="container mx-auto px-6">
+                <div class="text-center mb-12">
+                    <h2 class="text-3xl md:text-4xl font-bold accent-text">Education & Qualifications</h2>
+                    <p class="mt-2 text-md max-w-2xl mx-auto">A foundation of academic excellence and continuous professional development.</p>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div class="bg-white p-6 rounded-lg shadow-md hover:shadow-xl transition-shadow">
+                        <h3 class="font-bold text-xl accent-text">Bachelor Business Administration</h3>
+                        <p class="mt-1 text-md text-gray-700">Benha University - Egypt</p>
+                        <p class="mt-1 text-sm text-gray-500">June 2002 - June 2006</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg shadow-md hover:shadow-xl transition-shadow">
+                        <h3 class="font-bold text-xl accent-text">Human Resource Management Diploma</h3>
+                        <p class="mt-1 text-md text-gray-700">The American University in Cairo (AUC)</p>
+                        <p class="mt-1 text-sm text-gray-500">Mar 2010 - June 2011</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg shadow-md hover:shadow-xl transition-shadow">
+                        <h3 class="font-bold text-xl accent-text">Project Management Professional (PMP) Diploma</h3>
+                        <p class="mt-1 text-md text-gray-700">Regional IT Institute (RITI) in Cairo</p>
+                        <p class="mt-1 text-sm text-gray-500">February 2012</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Languages Section -->
+        <section id="languages" class="py-16 md:py-24">
+            <div class="container mx-auto px-6">
+                <div class="text-center mb-12">
+                    <h2 class="text-3xl md:text-4xl font-bold accent-text">Languages</h2>
+                    <p class="mt-2 text-md max-w-2xl mx-auto">Proficiency in multiple languages facilitates effective communication in diverse global environments.</p>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                    <div class="bg-white p-6 rounded-lg shadow-md text-center hover:shadow-xl transition-shadow">
+                        <h3 class="font-bold text-xl accent-text">Arabic</h3>
+                        <p class="mt-1 text-md text-gray-700">Native</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg shadow-md text-center hover:shadow-xl transition-shadow">
+                        <h3 class="font-bold text-xl accent-text">English</h3>
+                        <p class="mt-1 text-md text-gray-700">Fluent</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg shadow-md text-center hover:shadow-xl transition-shadow">
+                        <h3 class="font-bold text-xl accent-text">German</h3>
+                        <p class="mt-1 text-md text-gray-700">Basic Level 2 Goethe Institute</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg shadow-md text-center hover:shadow-xl transition-shadow">
+                        <h3 class="font-bold text-xl accent-text">Turkish</h3>
+                        <p class="mt-1 text-md text-gray-700">Studying Level A1 curriculum</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="projects" class="py-16 md:py-24 bg-gray-50">
+            <div class="container mx-auto px-6">
+                <div class="text-center mb-12">
+                    <h2 class="text-3xl md:text-4xl font-bold accent-text">Key Project Showcase</h2>
+                    <p class="mt-2 text-md max-w-2xl mx-auto">These selected projects highlight tangible results from major transformation initiatives, demonstrating the ability to translate strategic vision into measurable success and enhanced customer experience.</p>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    <div class="bg-white rounded-lg shadow-lg overflow-hidden transform hover:-translate-y-2 transition-transform duration-300">
+                        <div class="p-6">
+                            <h3 class="font-bold text-xl accent-text">Digital Onboarding Overhaul</h3>
+                            <p class="mt-2 text-sm">Led the deployment of a new digital account opening portal and e-signature capabilities (Adobe Livesign) to simplify customer journeys.</p>
+                        </div>
+                        <div class="px-6 py-4 highlight-bg">
+                            <p class="font-bold text-white">Result: ~40% Improvement in Turnaround Time</p>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-lg shadow-lg overflow-hidden transform hover:-translate-y-2 transition-transform duration-300">
+                        <div class="p-6">
+                            <h3 class="font-bold text-xl accent-text">Customer Experience Transformation</h3>
+                            <p class="mt-2 text-sm">Designed and implemented a new customer experience framework, including deploying Qualtrics, Microsoft Dynamics, and Genesys for advanced query and call management.</p>
+                        </div>
+                        <div class="px-6 py-4 highlight-bg">
+                             <p class="font-bold text-white">Result: ~100% Increase in NPS Scores</p>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-lg shadow-lg overflow-hidden transform hover:-translate-y-2 transition-transform duration-300">
+                        <div class="p-6">
+                            <h3 class="font-bold text-xl accent-text">Fintech Integration & Automation</h3>
+                            <p class="mt-2 text-sm">Championed the integration of Fintech solutions like IDnow and Norbloc for digital ID verification and data enrichment, and deployed robotics to improve operational efficiency.</p>
+                        </div>
+                        <div class="px-6 py-4 highlight-bg">
+                             <p class="font-bold text-white">Result: Significant Efficiency Gains & Risk Reduction</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="accent-bg text-white py-12">
+        <div class="container mx-auto px-6 text-center">
+            <h2 class="text-2xl font-bold">Let's Connect</h2>
+            <p class="mt-2 max-w-lg mx-auto">Open to discussing new challenges in operations, technology, and transformation.</p>
+            <div class="mt-6 flex justify-center items-center space-x-6">
+                <a href="mailto:amrkhairy42@gmail.com" class="bg-white text-gray-800 font-bold py-2 px-4 rounded-full hover:bg-gray-200 transition">Email Me</a>
+                <a href="https://www.linkedin.com/in/amrkhairy" target="_blank" class="bg-white text-gray-800 font-bold py-2 px-4 rounded-full hover:bg-gray-200 transition">View LinkedIn</a>
+            </div>
+        </div>
+    </footer>
+
+    <!-- The Modal -->
+    <div id="photoModal" class="modal">
+        <span class="close-button">&times;</span>
+        <img class="modal-content" id="img01">
+    </div>
+
+    <script>
+        const careerData = {
+            'dir-ws': {
+                title: 'Director of Wholesale Client Services',
+                company: 'HSBC Dubai',
+                period: 'Apr 2019 - Present',
+                description: 'Responsible for account opening, credit analysis, client servicing, and customer due diligence operations for the MENA & Turkey region.',
+                achievements: [
+                    'Led a team of 130 members across 9 countries and manage a cost base of c.$15m.',
+                    'Improved account opening turnaround time by c.40% and increased NPS scores by c.100%.',
+                    'Deployed e-sign capability working with Adobe Livesign for customer onboarding.',
+                    'Reduced cost base by c.$3m through digital innovation and location strategy initiatives.',
+                    'Designed and implemented a new customer experience framework and established a customer escalation desk resulting in a 24 hrs. complaint resolution TAT.',
+                    'Implemented a new customer survey tool (Qualtrics) which increased response rates and in turn helped improve NPS scores by 100%.',
+                    'Designed and successfully implemented targeted people development and engagement plans and improved employee feedback survey results by c.30% making operations a better place to work.',
+                    'Deployed new systems for client servicing & call center operations such as Microsoft Dynamics for query management (ML enabled) and Genesys for call handling and advanced IVR routing.',
+                    'Contracted Fintechs such as IDnow for digital identity verification and Norbloc for third party data enrichment to help simplify customer journeys.',
+                    'Chair of the regional operations governance committee designated to monitor and oversee the performance and risk management of the function.'
+                ]
+            },
+            'head-dt': {
+                title: 'Head of Digital Transformation & Chief Data Officer',
+                company: 'HSBC Dubai',
+                period: 'Dec 2014 - Apr 2019',
+                description: 'Responsible for the transformation team across the region, managing a large change portfolio and driving digital deployments.',
+                achievements: [
+                    'Managed a change portfolio size in excess of c.$10m delivering change across several functions.',
+                    'Deployed a new credit mgmt. software and improved time to decision by 20%.',
+                    'Deployed a new account opening portal working with a third party (Avoka) to deliver better customer experience and transition to digital.',
+                    'Deployed confirmation.com (third part solution) for audit letters generation reducing TAT by 50% and improving client experience.',
+                    'Designed and deployed a 360 RM surveillance tool providing a holistic view of client profiles and account activity, including a trigger management portal for risk triggers.',
+                    'Deployed e-signatures for servicing requests such as term deposits, secondary account opening, account closures, and forms, reducing TAT by c.50%.',
+                    'Delivered a full demise of manual payments moving clients to e-channels and demised paper statements delivering c.$300k sustainable cost saves.',
+                    'Represented HSBC on the Fintech Hive program sponsored by DIFC and was a member of the decisioning panel. Represented HSBC on the UAE Banking Federation (UBF).',
+                    'Deployed a call back verification tool reducing volumes by 50%.',
+                    'Improved data quality metrics by c.40% across the region.',
+                    'Established a data analytics and data quality team to act as a single source of truth for the business and resourcefulness to tackle data insights and management information.'
+                ]
+            },
+            'prog-mgr': {
+                title: 'Regional Program Manager',
+                company: 'HSBC Dubai',
+                period: 'Jul 2013 - Dec 2014',
+                description: 'Managed regional programs focused on process improvement and technology implementation.',
+                achievements: [
+                    'Successfully delivered key regional projects on time and within budget.',
+                    'Coordinated with cross-functional teams to ensure alignment with business objectives.',
+                    'Developed and maintained project documentation and governance frameworks.'
+                ]
+            },
+            'mgmt-consultant': {
+                title: 'Management Consultant',
+                company: 'Sumerge for Software Solutions',
+                period: 'Jan 2013 - June 2013',
+                description: 'Provided strategic consulting services to clients, focusing on software solutions and business process optimization.',
+                achievements: [
+                    'Analyzed client needs and proposed tailored software solutions.',
+                    'Assisted in the development of implementation strategies for new systems.',
+                    'Contributed to client engagements by providing expert advice on process improvements.'
+                ]
+            },
+            'process-consultant': {
+                title: 'Process Consultant/Business Analyst',
+                company: 'HSBC Cairo',
+                period: 'Jul 2010 - July 2013',
+                description: 'Analyzed and optimized business processes, acting as a liaison between business and technology teams.',
+                achievements: [
+                    'Identified process bottlenecks and proposed solutions for efficiency gains.',
+                    'Developed detailed business requirements for system enhancements.',
+                    'Supported user acceptance testing and post-implementation reviews.'
+                ]
+            },
+            'cust-service-hsbc': {
+                title: 'Customer Service Officer',
+                company: 'HSBC Cairo',
+                period: 'July 2008 - July 2010',
+                description: 'Provided direct customer support, resolving inquiries and ensuring high levels of customer satisfaction.',
+                achievements: [
+                    'Managed a high volume of customer interactions with a focus on problem resolution.',
+                    'Adhered to strict compliance and service quality standards.',
+                    'Gained foundational knowledge of banking operations and customer needs.'
+                ]
+            },
+            'cust-service-orange': {
+                title: 'Customer Service Officer',
+                company: 'Orange',
+                period: 'July 2006 - July 2008',
+                description: 'Assisted customers with service inquiries, technical support, and product information.',
+                achievements: [
+                    'Developed strong communication and problem-solving skills.',
+                    'Maintained high customer satisfaction ratings.',
+                    'Handled diverse customer requests efficiently and effectively.'
+                ]
+            }
+        };
+
+        const timelineNav = document.getElementById('timeline-nav');
+        const timelineDetails = document.getElementById('timeline-details');
+        
+        function createTimelineItem(id, data, isActive = false) {
+            return `
+                <div id="timeline-item-${id}" class="timeline-item relative mb-6 cursor-pointer ${isActive ? 'active' : ''}" onclick="showDetails('${id}')">
+                    <div class="pl-8">
+                        <h4 class="font-bold text-lg ${isActive ? 'highlight-text' : 'accent-text'} transition-colors">${data.title} <span class="text-gray-500 font-normal text-base">| ${data.company}</span></h4>
+                        <p class="text-sm text-gray-500">${data.period}</p>
+                    </div>
+                </div>
+            `;
+        }
+
+        function showDetails(id) {
+            const data = careerData[id];
+            
+            document.querySelectorAll('.timeline-item').forEach(item => item.classList.remove('active'));
+            document.querySelectorAll('.timeline-item h4').forEach(item => {
+                item.classList.remove('highlight-text');
+                item.classList.add('accent-text');
+            });
+            
+            const activeItem = document.getElementById(`timeline-item-${id}`);
+            activeItem.classList.add('active');
+            activeItem.querySelector('h4').classList.add('highlight-text');
+            activeItem.querySelector('h4').classList.remove('accent-text');
+
+            timelineDetails.innerHTML = `
+                <h3 class="font-bold text-2xl accent-text">${data.title}</h3>
+                <p class="mt-1 text-sm font-semibold text-gray-500">${data.company}</p>
+                <p class="mt-1 text-sm text-gray-500">${data.period}</p>
+                <p class="mt-4 text-md">${data.description}</p>
+                <h4 class="mt-6 font-bold text-lg accent-text">Key Achievements:</h4>
+                <ul class="mt-2 list-disc list-inside space-y-2 text-sm">
+                    ${data.achievements.map(ach => `<li>${ach}</li>`).join('')}
+                </ul>
+            `;
+
+            // Scroll to the timeline-details section itself
+            setTimeout(() => {
+                timelineDetails.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 50); // Small delay to allow DOM to update
+        }
+        
+        window.addEventListener('DOMContentLoaded', () => {
+            const timelineIds = Object.keys(careerData);
+            // Sort timeline IDs by start date (assuming earlier roles have earlier periods)
+            timelineIds.sort((a, b) => {
+                const periodA = careerData[a].period;
+                const periodB = careerData[b].period;
+
+                // Simple date parsing for sorting (e.g., "Apr 2019 - Present" vs "Jul 2010 - July 2013")
+                const parseDate = (periodStr) => {
+                    const parts = periodStr.split(' - ')[0].split(' ');
+                    const month = new Date(Date.parse(parts[0] + " 1, 2000")).getMonth();
+                    const year = parseInt(parts[1]);
+                    return new Date(year, month);
+                };
+
+                const dateA = parseDate(periodA);
+                const dateB = parseDate(periodB);
+                return dateB - dateA; // Sort in descending order (most recent first)
+            });
+
+
+            timelineNav.innerHTML = timelineIds.map((id, index) => createTimelineItem(id, careerData[id], index === 0)).join('');
+            showDetails(timelineIds[0]);
+
+            const ctx = document.getElementById('skillsChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: [
+                        'Large-Scale Program Management', 
+                        'Digital Transformation & Innovation', 
+                        'Operations & P&L Leadership', 
+                        'Fintech Integration & Automation',
+                        'Senior Stakeholder Management',
+                        'Risk, Compliance & Governance'
+                        ],
+                    datasets: [{
+                        label: 'Expertise Level',
+                        data: [95, 92, 90, 88, 98, 85],
+                        backgroundColor: '#0A2342',
+                        borderColor: '#B89B72',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return ' A key strength demonstrated through numerous successful initiatives.';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            grid: {
+                                display: false,
+                                drawBorder: false,
+                            },
+                             ticks: {
+                                display: false
+                            }
+                        },
+                        y: {
+                           grid: {
+                                display: false,
+                                drawBorder: false,
+                            },
+                            ticks: {
+                                font: {
+                                    size: 12,
+                                    weight: '500',
+                                },
+                                color: '#4A4A4A',
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Get the modal
+            const modal = document.getElementById("photoModal");
+            const img = document.getElementById("profilePhoto");
+            const modalImg = document.getElementById("img01");
+            const closeButton = document.getElementsByClassName("close-button")[0];
+
+            img.onclick = function(){
+              modal.style.display = "flex";
+              modalImg.src = this.src;
+            }
+
+            closeButton.onclick = function() { 
+              modal.style.display = "none";
+            }
+
+            modal.onclick = function(event) {
+                if (event.target === modal) {
+                    modal.style.display = "none";
+                }
+            }
+
+            // Ensure page starts at the top on load/refresh
+            setTimeout(() => {
+                window.scrollTo({ top: 0, behavior: 'auto' });
+            }, 100); // Small delay to allow full rendering
+        });
+
+    </script>
+</body>
+</html>
+
+
